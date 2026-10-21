@@ -1,22 +1,71 @@
-ifeq ($(ROOTLESS),1)
-THEOS_PACKAGE_SCHEME = rootless
-else ifeq ($(ROOTHIDE),1)
-THEOS_PACKAGE_SCHEME = roothide
-endif
+name: Build YTMusicUltimate DEB
 
-ARCHS = arm64
-INSTALL_TARGET_PROCESSES = YouTubeMusic
-TARGET = iphone:clang:16.5:13.0
-PACKAGE_VERSION = 2.4.1
+on:
+  push:
+  workflow_dispatch:
 
-include $(THEOS)/makefiles/common.mk
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
-TWEAK_NAME = YTMusicUltimate
+jobs:
+  build:
+    name: Build YTMusicUltimate DEB
+    runs-on: macos-15-intel
+    permissions:
+      contents: write
 
-# Compilam cele 4 fisiere (cu tot cu Colours.x)
-$(TWEAK_NAME)_FILES = Source/RemoveAds.x Source/BackgroundPlayback.x Source/PremiumStatus.x Source/Colours.x
+    steps:
+      - name: Checkout Main
+        uses: actions/checkout@v4
+        with:
+          path: main
+          submodules: recursive
 
-$(TWEAK_NAME)_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -DTWEAK_VERSION=$(PACKAGE_VERSION)
-$(TWEAK_NAME)_FRAMEWORKS = UIKit Foundation
+      - name: Install Dependencies
+        run: brew install make ldid
 
-include $(THEOS_MAKE_PATH)/tweak.mk
+      - name: Set PATH environment variables
+        run: |
+          echo "$(brew --prefix make)/libexec/gnubin" >> $GITHUB_PATH
+          echo "THEOS=${{ github.workspace }}/theos" >> $GITHUB_ENV
+
+      - name: Cache Theos
+        id: theos
+        uses: actions/cache@v4
+        env:
+          cache-name: theos_cache_344ee59
+        with:
+          path: theos/
+          key: ${{ env.cache-name }}
+          restore-keys: ${{ env.cache-name }}
+
+      - name: Setup Theos
+        if: steps.theos.outputs.cache-hit != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: theos/theos
+          ref: 344ee5925df036dbd1312b783ad5a00d153c2445
+          path: theos
+          submodules: recursive
+
+      - name: Download iOS SDK
+        if: steps.theos.outputs.cache-hit != 'true'
+        run: |
+          git clone --quiet -n --depth=1 --filter=tree:0 https://github.com/theos/sdks.git
+          cd sdks
+          git sparse-checkout set --no-cone iPhoneOS16.5.sdk
+          git checkout
+          mv *.sdk $THEOS/sdks
+
+      - name: Build Tweak
+        run: |
+          cd main
+          make clean package DEBUG=0 FINALPACKAGE=1
+          mv packages/*.deb ../YTMusicUltimate.deb
+
+      - name: Upload DEB Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: YTMusicUltimate-DEB
+          path: YTMusicUltimate.deb
