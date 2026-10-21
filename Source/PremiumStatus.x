@@ -247,14 +247,22 @@ static BOOL YTMU(NSString *key) {
 }
 %end
 
-// Remove Upgrade button
+// Remove Upgrade & Samples buttons
 %hook YTPivotBarView
 - (void)setRenderer:(YTIPivotBarRenderer *)renderer {
     NSMutableArray <YTIPivotBarSupportedRenderers *> *items = [renderer itemsArray];
-    NSUInteger index = [items indexOfObjectPassingTest:^BOOL(YTIPivotBarSupportedRenderers *renderers, NSUInteger idx, BOOL *stop) {
-        return [[[renderers pivotBarItemRenderer] pivotIdentifier] isEqualToString:@"SPunlimited"];
+    NSMutableIndexSet *indexesToRemove = [NSMutableIndexSet indexSet];
+    
+    [items enumerateObjectsUsingBlock:^(YTIPivotBarSupportedRenderers *renderers, NSUInteger idx, BOOL *stop) {
+        NSString *identifier = [[renderers pivotBarItemRenderer] pivotIdentifier];
+        if ([identifier isEqualToString:@"SPunlimited"] || [identifier isEqualToString:@"FEmusic_immersive"]) {
+            [indexesToRemove addIndex:idx];
+        }
     }];
-    if (index != NSNotFound && YTMU(@"YTMUltimateIsEnabled")) [items removeObjectAtIndex:index];
+    
+    if (indexesToRemove.count > 0) {
+        [items removeObjectsAtIndexes:indexesToRemove];
+    }
     %orig;
 }
 %end
