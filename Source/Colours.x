@@ -13,12 +13,6 @@
 @interface YTLightweightBrowseBackgroundView : UIView
 @end
 
-@interface YTMFlexibleHeaderBackgroundView : UIView
-@end
-
-@interface YTMHeaderGradientView : UIView
-@end
-
 // Culoarea Aurie (#FFD700) pre-alocata o singura data (0% consum CPU)
 static UIColor *goldColor(void) {
     static UIColor *gold = nil;
@@ -53,7 +47,7 @@ static UIColor *goldColor(void) {
 - (UIColor *)brandIconActive          { return goldColor(); }
 %end
 
-#pragma mark - 2. Eliminare Blur/Glow din Playlist & Player -> Economie GPU!
+#pragma mark - 2. Player & Fundal OLED (Fara sa ascunda pozele albumelor!)
 %hook YTMPlayerPageColorScheme
 - (UIColor *)backgroundColor { return [UIColor blackColor]; }
 - (UIColor *)expandedTabsBackgroundColor { return [UIColor blackColor]; }
@@ -66,40 +60,11 @@ static UIColor *goldColor(void) {
 - (BOOL)gradientBackgroundEnabled { return NO; }
 %end
 
+// Opreste DOAR fundalul blurat din spate, pastrand toate pozele de album/artisti intacte!
 %hook YTLightweightBrowseBackgroundView
-- (void)didMoveToWindow {
-    %orig;
-    self.hidden = YES;
+- (UIImageView *)imageView {
     self.backgroundColor = [UIColor blackColor];
-}
-%end
-
-%hook YTMFlexibleHeaderBackgroundView
-- (void)didMoveToWindow {
-    %orig;
-    self.hidden = YES;
-    self.backgroundColor = [UIColor blackColor];
-}
-%end
-
-%hook YTMHeaderGradientView
-- (void)didMoveToWindow {
-    %orig;
-    self.hidden = YES;
-}
-%end
-
-// Dezactiveaza fundalurile blurate si gradienții pe toate paginile
-%hook UIView
-- (void)didMoveToWindow {
-    %orig;
-    NSString *cls = NSStringFromClass([self class]);
-    if ([cls containsString:@"HeaderBackground"] || [cls containsString:@"BrowseBackground"] || [cls containsString:@"Blurred"] || [cls containsString:@"Scrim"] || [cls containsString:@"GradientView"]) {
-        self.hidden = YES;
-        self.backgroundColor = [UIColor blackColor];
-    } else if ([cls isEqualToString:@"YTMNavigationBarView"] || [cls isEqualToString:@"YTMMiniPlayerView"] || [cls isEqualToString:@"YTMPivotBarView"]) {
-        self.backgroundColor = [UIColor blackColor];
-    }
+    return nil;
 }
 %end
 
@@ -131,20 +96,17 @@ static UIColor *goldColor(void) {
 %end
 
 #pragma mark - 4. EXTREME BATTERY SAVER (Oprire Telemetrie, Watchdog si Loguri Google)
-// Opreste trimiterea continua de evenimente analitice in fundal (Google Event Logger)
 %hook YTGELController
 - (void)logBatchEvent:(id)arg1 { }
 - (void)logEvent:(id)arg1 { }
 - (void)sendEvents { }
 %end
 
-// Opreste masuratorile de telemetrie CSI (Client Side Instrumentation)
 %hook YTCSIController
 - (void)sendTimingAction:(id)arg1 { }
 - (void)tick:(id)arg1 { }
 %end
 
-// Opreste Watchdog-ul si monitorizarea continua de sistem in fundal
 %hook YTSystemHealthController
 - (void)startSystemHealthMonitoring { }
 - (BOOL)isEnabled { return NO; }
