@@ -13,8 +13,8 @@ include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = YTMusicUltimate
 
-$(TWEAK_NAME)_FILES = Source/RemoveAds.x Source/BackgroundPlayback.x Source/PremiumStatus.x Source/Colours.x Source/Sideloading.x
-$(TWEAK_NAME)_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -DTWEAK_VERSION=$(PACKAGE_VERSION)
-$(TWEAK_NAME)_FRAMEWORKS = UIKit Foundation QuartzCore CoreImage
+$(TWEAK_NAME)_FILES = Source/RemoveAds.x Source/BackgroundPlayback.x Source/PremiumStatus.x Source/Colours.x
+$(TWEAK_NAME)_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -O3 -DTWEAK_VERSION=$(PACKAGE_VERSION)
+$(TWEAK_NAME)_FRAMEWORKS = UIKit Foundation
 
 include $(THEOS_MAKE_PATH)/tweak.mk
