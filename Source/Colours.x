@@ -1,79 +1,199 @@
 #import <UIKit/UIKit.h>
+#import <QuartzCore/QuartzCore.h>
 
-// Functie helper pentru culoarea ta Aurie (#FFD700 -> R:1.0, G:0.843, B:0.0)
+// Culoarea Aurie (#FFD700)
 static UIColor *goldAccentColor(void) {
     return [UIColor colorWithRed:1.00 green:0.843 blue:0.00 alpha:1.0];
 }
 
-// Activam permanent OLED Dark Mode si Tastatura OLED
-static BOOL isOLEDTheme(void) {
-    return YES;
+// Verificare inteligenta daca o culoare (RGB sau P3) este o nuanta de Rosu YouTube
+static BOOL isRedShade(CGFloat r, CGFloat g, CGFloat b, CGFloat a) {
+    return (r > 0.75 && g < 0.30 && b < 0.30 && a > 0.4);
 }
 
-static BOOL isOLEDKeyboard(void) {
-    return YES;
+// Verificare daca o culoare este Gri-Inchis (fundalurile YTMusic: #030303 -> #282828)
+static BOOL isDarkGreyBackground(CGFloat r, CGFloat g, CGFloat b, CGFloat a) {
+    return (fabs(r - g) < 0.04 && fabs(g - b) < 0.04 && r > 0.0 && r < 0.18 && a > 0.85);
 }
 
-@interface YTMPlayerPageColorScheme : NSObject
-- (void)setPlayButtonColor:(UIColor *)color;
-@end
+#pragma mark - 1. Interceptare globala UIColor (inclusiv Display P3 folosit in YTM 9.40)
+%hook UIColor
++ (UIColor *)colorWithRed:(CGFloat)red green:(CGFloat)green blue:(CGFloat)blue alpha:(CGFloat)alpha {
+    if (isRedShade(red, green, blue, alpha)) {
+        return %orig(1.00, 0.843, 0.00, alpha);
+    }
+    if (isDarkGreyBackground(red, green, blue, alpha)) {
+        return %orig(0.0, 0.0, 0.0, alpha);
+    }
+    return %orig;
+}
 
-@interface UIKeyboardDockView : UIView
-@end
++ (UIColor *)colorWithDisplayP3Red:(CGFloat)red green:(CGFloat)green blue:(CGFloat)blue alpha:(CGFloat)alpha {
+    if (isRedShade(red, green, blue, alpha)) {
+        return %orig(1.00, 0.843, 0.00, alpha);
+    }
+    if (isDarkGreyBackground(red, green, blue, alpha)) {
+        return %orig(0.0, 0.0, 0.0, alpha);
+    }
+    return %orig;
+}
 
-@interface UIKeyboardLayoutStar : UIView
-@end
+- (UIColor *)initWithRed:(CGFloat)red green:(CGFloat)green blue:(CGFloat)blue alpha:(CGFloat)alpha {
+    if (isRedShade(red, green, blue, alpha)) {
+        return %orig(1.00, 0.843, 0.00, alpha);
+    }
+    if (isDarkGreyBackground(red, green, blue, alpha)) {
+        return %orig(0.0, 0.0, 0.0, alpha);
+    }
+    return %orig;
+}
 
-@interface YTPivotBarView : UIView
-@end
+- (UIColor *)initWithDisplayP3Red:(CGFloat)red green:(CGFloat)green blue:(CGFloat)blue alpha:(CGFloat)alpha {
+    if (isRedShade(red, green, blue, alpha)) {
+        return %orig(1.00, 0.843, 0.00, alpha);
+    }
+    if (isDarkGreyBackground(red, green, blue, alpha)) {
+        return %orig(0.0, 0.0, 0.0, alpha);
+    }
+    return %orig;
+}
 
-@interface YTMMusicMenuTitleView : UIView
-@end
++ (UIColor *)colorWithWhite:(CGFloat)white alpha:(CGFloat)alpha {
+    if (white > 0.0 && white < 0.18 && alpha > 0.85) {
+        return %orig(0.0, alpha);
+    }
+    return %orig;
+}
 
-@interface MDCSnackbarMessageView : UIView
-@end
++ (UIColor *)redColor { return goldAccentColor(); }
++ (UIColor *)systemRedColor { return goldAccentColor(); }
+%end
 
-@interface UIPredictionViewController : UIViewController
-@end
+#pragma mark - 2. Interceptare la nivel de CALayer (Bara rosie de sub "m5*", bulina notificari, miniplayer)
+%hook CALayer
+- (void)setBackgroundColor:(CGColorRef)color {
+    if (color) {
+        size_t numComponents = CGColorGetNumberOfComponents(color);
+        const CGFloat *c = CGColorGetComponents(color);
+        if (numComponents >= 3) {
+            CGFloat r = c[0], g = c[1], b = c[2];
+            CGFloat a = (numComponents >= 4) ? c[3] : 1.0;
+            if (isRedShade(r, g, b, a)) {
+                %orig([goldAccentColor() colorWithAlphaComponent:a].CGColor);
+                return;
+            }
+            if (isDarkGreyBackground(r, g, b, a)) {
+                %orig([UIColor colorWithWhite:0.0 alpha:a].CGColor);
+                return;
+            }
+        } else if (numComponents == 2) {
+            CGFloat w = c[0], a = c[1];
+            if (w > 0.0 && w < 0.18 && a > 0.85) {
+                %orig([UIColor colorWithWhite:0.0 alpha:a].CGColor);
+                return;
+            }
+        }
+    }
+    %orig;
+}
+%end
 
-@interface UICandidateViewController : UIViewController
-@end
+%hook CAShapeLayer
+- (void)setFillColor:(CGColorRef)color {
+    if (color && CGColorGetNumberOfComponents(color) >= 3) {
+        const CGFloat *c = CGColorGetComponents(color);
+        CGFloat a = (CGColorGetNumberOfComponents(color) >= 4) ? c[3] : 1.0;
+        if (isRedShade(c[0], c[1], c[2], a)) {
+            %orig([goldAccentColor() colorWithAlphaComponent:a].CGColor);
+            return;
+        }
+    }
+    %orig;
+}
+- (void)setStrokeColor:(CGColorRef)color {
+    if (color && CGColorGetNumberOfComponents(color) >= 3) {
+        const CGFloat *c = CGColorGetComponents(color);
+        CGFloat a = (CGColorGetNumberOfComponents(color) >= 4) ? c[3] : 1.0;
+        if (isRedShade(c[0], c[1], c[2], a)) {
+            %orig([goldAccentColor() colorWithAlphaComponent:a].CGColor);
+            return;
+        }
+    }
+    %orig;
+}
+%end
 
-@interface YTLightweightBrowseBackgroundView : UIView
-@end
+#pragma mark - 3. Eliminare Gradient din partea de sus (Speed dial / Header) si din Player
+%hook CAGradientLayer
+- (void)setColors:(NSArray *)colors {
+    NSMutableArray *blackColors = [NSMutableArray array];
+    for (NSUInteger i = 0; i < colors.count; i++) {
+        [blackColors addObject:(id)[UIColor blackColor].CGColor];
+    }
+    %orig(blackColors);
+}
+%end
 
-#pragma mark - OLED Dark Mode & Gold Accent in YTColor
+// Dezactivam blur-ul gri de pe bara de jos (Home, Samples, Search, Library) si Miniplayer
+%hook UIVisualEffectView
+- (void)didMoveToWindow {
+    %orig;
+    self.backgroundColor = [UIColor blackColor];
+    for (UIView *subview in self.subviews) {
+        if ([NSStringFromClass([subview class]) containsString:@"VisualEffectSubview"]) {
+            subview.backgroundColor = [UIColor blackColor];
+        }
+    }
+}
+%end
+
+#pragma mark - 4. Schimbare culoare Logo YouTube Music (Stanga Sus) din Rosu in Auriu
+%hook UIImageView
+- (void)setImage:(UIImage *)image {
+    %orig;
+    // Identificam logo-ul YTMusic din header dupa dimensiune (aprox 80-120x24-32) sau parinte
+    NSString *parentClass = NSStringFromClass([self.superview class]);
+    if ([parentClass containsString:@"Navigation"] || [parentClass containsString:@"Header"] || [parentClass containsString:@"TitleView"]) {
+        if (image && image.size.width > 60 && image.size.width < 150 && image.size.height > 18 && image.size.height < 40) {
+            // Aplicam filtru Hue Rotate ca cercul rosu din logo sa devina Auriu (#FFD700), pastrand scrisul "Music" alb!
+            CIFilter *hueFilter = [CIFilter filterWithName:@"CIHueAdjust"];
+            [hueFilter setValue:@(0.88) forKey:kCIInputAngleKey]; // Roteste din Rosu (0°) in Auriu (~50°)
+            CIImage *ciInput = [[CIImage alloc] initWithImage:image];
+            if (ciInput) {
+                [hueFilter setValue:ciInput forKey:kCIInputImageKey];
+                CIImage *ciOutput = hueFilter.outputImage;
+                if (ciOutput) {
+                    CIContext *ctx = [CIContext contextWithOptions:nil];
+                    CGImageRef cgImg = [ctx createCGImage:ciOutput fromRect:ciOutput.extent];
+                    if (cgImg) {
+                        UIImage *goldLogo = [UIImage imageWithCGImage:cgImg scale:image.scale orientation:image.imageOrientation];
+                        CGImageRelease(cgImg);
+                        %orig(goldLogo);
+                    }
+                }
+            }
+        }
+    }
+}
+%end
+
+#pragma mark - 5. Clasele Specifice YouTube Music
 @interface YTColor : UIColor
 + (UIColor *)blackPure;
 @end
 
 %hook YTColor
-+ (UIColor *)black0 { return isOLEDTheme() ? [self blackPure] : %orig; }
-+ (UIColor *)black1 { return isOLEDTheme() ? [self blackPure] : %orig; }
-+ (UIColor *)black2 { return isOLEDTheme() ? [self blackPure] : %orig; }
-+ (UIColor *)black3 { return isOLEDTheme() ? [self blackPure] : %orig; }
-+ (UIColor *)black4 { return isOLEDTheme() ? [self blackPure] : %orig; }
-+ (UIColor *)grey1  { return isOLEDTheme() ? [self blackPure] : %orig; }
-+ (UIColor *)grey2  { return isOLEDTheme() ? [self blackPure] : %orig; }
-
-// Inlocuire Rosu YouTube cu Auriu (#FFD700)
++ (UIColor *)black0 { return [self blackPure]; }
++ (UIColor *)black1 { return [self blackPure]; }
++ (UIColor *)black2 { return [self blackPure]; }
++ (UIColor *)black3 { return [self blackPure]; }
++ (UIColor *)black4 { return [self blackPure]; }
++ (UIColor *)grey1  { return [self blackPure]; }
++ (UIColor *)grey2  { return [self blackPure]; }
 + (UIColor *)youTubeRed { return goldAccentColor(); }
 + (UIColor *)YouTubeRed { return goldAccentColor(); }
-+ (UIColor *)brandRed   { return goldAccentColor(); }
 %end
 
-#pragma mark - Paleta Generala YT (OLED + Gold Accent)
-%hook YTCommonColorPalette
-- (UIColor *)brandBackgroundSolid   { return [UIColor blackColor]; }
-- (UIColor *)brandBackgroundPrimary { return [UIColor blackColor]; }
-- (UIColor *)generalBackgroundA     { return [UIColor blackColor]; }
-- (UIColor *)generalBackgroundB     { return [UIColor blackColor]; }
-- (UIColor *)menuBackground         { return [UIColor blackColor]; }
-- (UIColor *)staticBrandRed         { return goldAccentColor(); }
-- (UIColor *)themedRed              { return goldAccentColor(); }
-%end
-
-#pragma mark - Player & Meniuri OLED
 %hook YTMPlayerPageColorScheme
 - (UIColor *)backgroundColor { return [UIColor blackColor]; }
 - (UIColor *)expandedTabsBackgroundColor { return [UIColor blackColor]; }
@@ -82,38 +202,8 @@ static BOOL isOLEDKeyboard(void) {
 - (UIColor *)overlayButtonColor { return [UIColor blackColor]; }
 - (UIColor *)overlayErrorBackgroundColor { return [UIColor blackColor]; }
 - (UIColor *)AVSwitchBackgroundColor { return [UIColor blackColor]; }
-- (UIColor *)AVSwitchActiveModeColor { return [goldAccentColor() colorWithAlphaComponent:0.25]; }
 - (UIColor *)queueBackgroundColor { return [UIColor blackColor]; }
-- (UIColor *)queueCurrentlyPlayingColor { return [goldAccentColor() colorWithAlphaComponent:0.15]; }
 - (BOOL)gradientBackgroundEnabled { return NO; }
-%end
-
-%hook YTPivotBarView
-- (UIView *)contentView {
-    UIView *orig = %orig;
-    if (isOLEDTheme()) orig.backgroundColor = [UIColor blackColor];
-    return orig;
-}
-- (void)didMoveToWindow {
-    %orig;
-    if (isOLEDTheme() && self.subviews.count > 0) {
-        self.subviews[0].backgroundColor = [UIColor blackColor];
-    }
-}
-%end
-
-%hook YTMMusicMenuTitleView
-- (void)didMoveToWindow {
-    %orig;
-    if (isOLEDTheme()) self.backgroundColor = [UIColor blackColor];
-}
-%end
-
-%hook MDCSnackbarMessageView
-- (void)didMoveToWindow {
-    %orig;
-    if (isOLEDTheme()) self.backgroundColor = [UIColor blackColor];
-}
 %end
 
 %hook YTLightweightBrowseBackgroundView
@@ -121,60 +211,9 @@ static BOOL isOLEDKeyboard(void) {
     self.backgroundColor = [UIColor blackColor];
     return nil;
 }
-%end
-
-#pragma mark - Interceptare inteligenta Rosu -> Auriu (#FFD700) in toata aplicatia
-%hook UIColor
-+ (UIColor *)colorWithRed:(CGFloat)red green:(CGFloat)green blue:(CGFloat)blue alpha:(CGFloat)alpha {
-    // Daca aplicatia incearca sa genereze o nuanta de rosu aprins (specifica YouTube / YTMusic)
-    if (red > 0.85 && green < 0.22 && blue < 0.22 && alpha > 0.5) {
-        return %orig(1.00, 0.843, 0.00, alpha);
-    }
-    // Daca incearca sa genereze fundalul gri-inchis standard YTMusic (#030303 - #212121), il facem Negru OLED pur
-    if (red == green && green == blue && red > 0.0 && red < 0.14 && alpha == 1.0) {
-        return %orig(0.0, 0.0, 0.0, 1.0);
-    }
-    return %orig;
-}
-
-+ (UIColor *)systemRedColor {
-    return goldAccentColor();
-}
-
-+ (UIColor *)redColor {
-    return goldAccentColor();
-}
-%end
-
-#pragma mark - OLED Dark Keyboard
-%hook UIPredictionViewController
-- (void)loadView {
+- (void)layoutSubviews {
     %orig;
-    if (isOLEDKeyboard()) [self.view setBackgroundColor:[UIColor blackColor]];
-}
-%end
-
-%hook UICandidateViewController
-- (void)loadView {
-    %orig;
-    if (isOLEDKeyboard()) [self.view setBackgroundColor:[UIColor blackColor]];
-}
-%end
-
-%hook UIKBRenderConfig
-- (void)setLightKeyboard:(BOOL)arg1 { %orig(NO); }
-%end
-
-%hook UIKeyboardDockView
-- (void)didMoveToWindow {
-    if (isOLEDKeyboard()) self.backgroundColor = [UIColor blackColor];
-    %orig;
-}
-%end
-
-%hook UIKeyboardLayoutStar 
-- (void)didMoveToWindow {
-    if (isOLEDKeyboard()) self.backgroundColor = [UIColor blackColor];
-    %orig;
+    self.backgroundColor = [UIColor blackColor];
+    self.hidden = YES;
 }
 %end
