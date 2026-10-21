@@ -14,7 +14,7 @@ include $(THEOS)/makefiles/common.mk
 TWEAK_NAME = YTMusicUltimate
 
 # Compilăm strict și exclusiv cele 3 fișiere
-$(TWEAK_NAME)_FILES = Source/RemoveAds.x Source/BackgroundPlayback.x Source/PremiumStatus.x
+$(TWEAK_NAME)_FILES = Source/RemoveAds.x Source/BackgroundPlayback.x Source/PremiumStatus.x Source/Sideloading.x
 
 $(TWEAK_NAME)_CFLAGS = -fobjc-arc -Wno-deprecated-declarations -DTWEAK_VERSION=$(PACKAGE_VERSION)
 $(TWEAK_NAME)_FRAMEWORKS = Foundation
