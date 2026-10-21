@@ -1,5 +1,18 @@
 #import <UIKit/UIKit.h>
 #import <QuartzCore/QuartzCore.h>
+#import <CoreImage/CoreImage.h>
+#import <math.h>
+
+// Declaratii necesare pentru clasele YouTube Music
+@interface YTColor : UIColor
++ (UIColor *)blackPure;
+@end
+
+@interface YTMPlayerPageColorScheme : NSObject
+@end
+
+@interface YTLightweightBrowseBackgroundView : UIView
+@end
 
 // Culoarea Aurie (#FFD700)
 static UIColor *goldAccentColor(void) {
@@ -13,7 +26,9 @@ static BOOL isRedShade(CGFloat r, CGFloat g, CGFloat b, CGFloat a) {
 
 // Verificare daca o culoare este Gri-Inchis (fundalurile YTMusic: #030303 -> #282828)
 static BOOL isDarkGreyBackground(CGFloat r, CGFloat g, CGFloat b, CGFloat a) {
-    return (fabs(r - g) < 0.04 && fabs(g - b) < 0.04 && r > 0.0 && r < 0.18 && a > 0.85);
+    CGFloat diffRG = (r > g) ? (r - g) : (g - r);
+    CGFloat diffGB = (g > b) ? (g - b) : (b - g);
+    return (diffRG < 0.04 && diffGB < 0.04 && r > 0.0 && r < 0.18 && a > 0.85);
 }
 
 #pragma mark - 1. Interceptare globala UIColor (inclusiv Display P3 folosit in YTM 9.40)
@@ -69,7 +84,7 @@ static BOOL isDarkGreyBackground(CGFloat r, CGFloat g, CGFloat b, CGFloat a) {
 + (UIColor *)systemRedColor { return goldAccentColor(); }
 %end
 
-#pragma mark - 2. Interceptare la nivel de CALayer (Bara rosie de sub "m5*", bulina notificari, miniplayer)
+#pragma mark - 2. Interceptare la nivel de CALayer (Bara rosie de sub melodii, bulina notificari, miniplayer)
 %hook CALayer
 - (void)setBackgroundColor:(CGColorRef)color {
     if (color) {
@@ -150,14 +165,11 @@ static BOOL isDarkGreyBackground(CGFloat r, CGFloat g, CGFloat b, CGFloat a) {
 #pragma mark - 4. Schimbare culoare Logo YouTube Music (Stanga Sus) din Rosu in Auriu
 %hook UIImageView
 - (void)setImage:(UIImage *)image {
-    %orig;
-    // Identificam logo-ul YTMusic din header dupa dimensiune (aprox 80-120x24-32) sau parinte
-    NSString *parentClass = NSStringFromClass([self.superview class]);
-    if ([parentClass containsString:@"Navigation"] || [parentClass containsString:@"Header"] || [parentClass containsString:@"TitleView"]) {
-        if (image && image.size.width > 60 && image.size.width < 150 && image.size.height > 18 && image.size.height < 40) {
-            // Aplicam filtru Hue Rotate ca cercul rosu din logo sa devina Auriu (#FFD700), pastrand scrisul "Music" alb!
+    if (image && image.size.width > 60 && image.size.width < 150 && image.size.height > 18 && image.size.height < 40) {
+        NSString *parentClass = NSStringFromClass([self.superview class]);
+        if ([parentClass containsString:@"Navigation"] || [parentClass containsString:@"Header"] || [parentClass containsString:@"TitleView"] || [parentClass containsString:@"Bar"]) {
             CIFilter *hueFilter = [CIFilter filterWithName:@"CIHueAdjust"];
-            [hueFilter setValue:@(0.88) forKey:kCIInputAngleKey]; // Roteste din Rosu (0°) in Auriu (~50°)
+            [hueFilter setValue:@(0.88) forKey:kCIInputAngleKey];
             CIImage *ciInput = [[CIImage alloc] initWithImage:image];
             if (ciInput) {
                 [hueFilter setValue:ciInput forKey:kCIInputImageKey];
@@ -169,19 +181,17 @@ static BOOL isDarkGreyBackground(CGFloat r, CGFloat g, CGFloat b, CGFloat a) {
                         UIImage *goldLogo = [UIImage imageWithCGImage:cgImg scale:image.scale orientation:image.imageOrientation];
                         CGImageRelease(cgImg);
                         %orig(goldLogo);
+                        return;
                     }
                 }
             }
         }
     }
+    %orig;
 }
 %end
 
 #pragma mark - 5. Clasele Specifice YouTube Music
-@interface YTColor : UIColor
-+ (UIColor *)blackPure;
-@end
-
 %hook YTColor
 + (UIColor *)black0 { return [self blackPure]; }
 + (UIColor *)black1 { return [self blackPure]; }
