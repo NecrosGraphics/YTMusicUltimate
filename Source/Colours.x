@@ -10,6 +10,15 @@
 @interface YTPivotBarView : UIView
 @end
 
+@interface YTLightweightBrowseBackgroundView : UIView
+@end
+
+@interface YTMFlexibleHeaderBackgroundView : UIView
+@end
+
+@interface YTMHeaderGradientView : UIView
+@end
+
 // Culoarea Aurie (#FFD700) pre-alocata o singura data (0% consum CPU)
 static UIColor *goldColor(void) {
     static UIColor *gold = nil;
