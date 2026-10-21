@@ -10,7 +10,7 @@
 @interface YTPivotBarView : UIView
 @end
 
-// Culoarea Aurie (#FFD700) pre-alocata (0% consum CPU)
+// Culoarea Aurie (#FFD700) pre-alocata o singura data (0% consum CPU)
 static UIColor *goldColor(void) {
     static UIColor *gold = nil;
     static dispatch_once_t onceToken;
@@ -34,17 +34,17 @@ static UIColor *goldColor(void) {
 %end
 
 %hook YTCommonColorPalette
-- (UIColor *)brandBackgroundSolid   { return [UIColor blackColor]; }
-- (UIColor *)brandBackgroundPrimary { return [UIColor blackColor]; }
+- (UIColor *)brandBackgroundSolid     { return [UIColor blackColor]; }
+- (UIColor *)brandBackgroundPrimary   { return [UIColor blackColor]; }
 - (UIColor *)brandBackgroundSecondary { return [UIColor blackColor]; }
-- (UIColor *)generalBackgroundA     { return [UIColor blackColor]; }
-- (UIColor *)generalBackgroundB     { return [UIColor blackColor]; }
-- (UIColor *)menuBackground         { return [UIColor blackColor]; }
-- (UIColor *)staticBrandRed         { return goldColor(); }
-- (UIColor *)brandIconActive        { return goldColor(); }
+- (UIColor *)generalBackgroundA       { return [UIColor blackColor]; }
+- (UIColor *)generalBackgroundB       { return [UIColor blackColor]; }
+- (UIColor *)menuBackground           { return [UIColor blackColor]; }
+- (UIColor *)staticBrandRed           { return goldColor(); }
+- (UIColor *)brandIconActive          { return goldColor(); }
 %end
 
-#pragma mark - 2. Eliminare Blur/Glow din Playlist (Poza 2 cu Tigrul) & Player -> Economie GPU!
+#pragma mark - 2. Eliminare Blur/Glow din Playlist & Player -> Economie GPU!
 %hook YTMPlayerPageColorScheme
 - (UIColor *)backgroundColor { return [UIColor blackColor]; }
 - (UIColor *)expandedTabsBackgroundColor { return [UIColor blackColor]; }
@@ -57,7 +57,6 @@ static UIColor *goldColor(void) {
 - (BOOL)gradientBackgroundEnabled { return NO; }
 %end
 
-// Opreste randarea pozei blurate din spatele Playlist-urilor / Albumelor (Poza 2)
 %hook YTLightweightBrowseBackgroundView
 - (void)didMoveToWindow {
     %orig;
@@ -81,7 +80,7 @@ static UIColor *goldColor(void) {
 }
 %end
 
-// Orice imagine de fundal blurata (Thumbnail/Header) din pagina de Playlist este oprita din randare
+// Dezactiveaza fundalurile blurate si gradienții pe toate paginile
 %hook UIView
 - (void)didMoveToWindow {
     %orig;
@@ -103,7 +102,26 @@ static UIColor *goldColor(void) {
 }
 %end
 
-#pragma mark - 3. BATTERY SAVER & SPEED BOOST (Oprire Telemetrie, Loguri si Tracking in Fundal)
+#pragma mark - 3. FARA ANIMATII INUTILE (Raspuns instant la atingere)
+// Elimina animatia de "valuri" (Material Ripple/Ink) cand apesi pe melodii sau butoane
+%hook MDCInkView
+- (void)startTouchBeganAnimationAtPoint:(CGPoint)point completion:(id)completion { }
+- (void)startTouchEndedAnimationAtPoint:(CGPoint)point completion:(id)completion { }
+%end
+
+%hook MDCRippleView
+- (void)beginRippleTouchDownAtPoint:(CGPoint)point animated:(BOOL)animated completion:(id)completion { }
+- (void)beginRippleTouchUpAnimated:(BOOL)animated completion:(id)completion { }
+%end
+
+// Dezactiveaza pre-redarea video automata (Inline Playback) cand faci scroll pe Home
+%hook YTColdConfig
+- (BOOL)isInlineMutedPlaybackEnabled { return NO; }
+- (BOOL)musicClientConfigIosEnableInlineMuted { return NO; }
+- (BOOL)enableYouthereCommandsOnIos { return NO; }
+%end
+
+#pragma mark - 4. EXTREME BATTERY SAVER (Oprire Telemetrie, Watchdog si Loguri Google)
 // Opreste trimiterea continua de evenimente analitice in fundal (Google Event Logger)
 %hook YTGELController
 - (void)logBatchEvent:(id)arg1 { }
@@ -117,9 +135,14 @@ static UIColor *goldColor(void) {
 - (void)tick:(id)arg1 { }
 %end
 
-// Opreste rapoartele de retea si ping-urile de tracking
+// Opreste Watchdog-ul si monitorizarea continua de sistem in fundal
 %hook YTSystemHealthController
 - (void)startSystemHealthMonitoring { }
+- (BOOL)isEnabled { return NO; }
+%end
+
+%hook YTStallDetector
+- (void)startDetection { }
 - (BOOL)isEnabled { return NO; }
 %end
 
