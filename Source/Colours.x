@@ -1,20 +1,17 @@
 #import <UIKit/UIKit.h>
 
-static BOOL YTMU(NSString *key) {
-    NSDictionary *YTMUltimateDict = [[NSUserDefaults standardUserDefaults] dictionaryForKey:@"YTMUltimate"];
-    return [YTMUltimateDict[key] boolValue];
+// Functie helper pentru culoarea ta Aurie (#FFD700 -> R:1.0, G:0.843, B:0.0)
+static UIColor *goldAccentColor(void) {
+    return [UIColor colorWithRed:1.00 green:0.843 blue:0.00 alpha:1.0];
 }
 
+// Activam permanent OLED Dark Mode si Tastatura OLED
 static BOOL isOLEDTheme(void) {
-    return YTMU(@"YTMUltimateIsEnabled") && YTMU(@"oledTheme");
+    return YES;
 }
 
-static BOOL isOLEDKeyboard() {
-    return YTMU(@"YTMUltimateIsEnabled") && YTMU(@"oledKeyboard");
-}
-
-static BOOL isLowContrast() {
-    return YTMU(@"YTMUltimateIsEnabled") && YTMU(@"lowContrast");
+static BOOL isOLEDKeyboard(void) {
+    return YES;
 }
 
 @interface YTMPlayerPageColorScheme : NSObject
@@ -42,46 +39,53 @@ static BOOL isLowContrast() {
 @interface UICandidateViewController : UIViewController
 @end
 
-#pragma mark - OLED Dark mode
+@interface YTLightweightBrowseBackgroundView : UIView
+@end
+
+#pragma mark - OLED Dark Mode & Gold Accent in YTColor
 @interface YTColor : UIColor
 + (UIColor *)blackPure;
 @end
 
 %hook YTColor
-+ (UIColor *)black0 {
-    return isOLEDTheme() ? [self blackPure] : %orig;
-}
++ (UIColor *)black0 { return isOLEDTheme() ? [self blackPure] : %orig; }
++ (UIColor *)black1 { return isOLEDTheme() ? [self blackPure] : %orig; }
++ (UIColor *)black2 { return isOLEDTheme() ? [self blackPure] : %orig; }
++ (UIColor *)black3 { return isOLEDTheme() ? [self blackPure] : %orig; }
++ (UIColor *)black4 { return isOLEDTheme() ? [self blackPure] : %orig; }
++ (UIColor *)grey1  { return isOLEDTheme() ? [self blackPure] : %orig; }
++ (UIColor *)grey2  { return isOLEDTheme() ? [self blackPure] : %orig; }
 
-+ (UIColor *)black1 {
-    return isOLEDTheme() ? [self blackPure] : %orig;
-}
-
-+ (UIColor *)black2 {
-    return isOLEDTheme() ? [self blackPure] : %orig;
-}
-
-+ (UIColor *)black3 {
-    return isOLEDTheme() ? [self blackPure] : %orig;
-}
-
-+ (UIColor *)black4 {
-    return isOLEDTheme() ? [self blackPure] : %orig;
-}
+// Inlocuire Rosu YouTube cu Auriu (#FFD700)
++ (UIColor *)youTubeRed { return goldAccentColor(); }
++ (UIColor *)YouTubeRed { return goldAccentColor(); }
++ (UIColor *)brandRed   { return goldAccentColor(); }
 %end
 
-%hook YTMPlayerPageColorScheme
-- (UIColor *)backgroundColor { return isOLEDTheme() ? [UIColor blackColor] : %orig; }
-- (UIColor *)expandedTabsBackgroundColor { return isOLEDTheme() ? [UIColor blackColor] : %orig; }
-- (UIColor *)miniPlayerColor { return isOLEDTheme() ? [UIColor blackColor] : %orig; }
-- (UIColor *)expandedTabViewColor { return isOLEDTheme() ? [UIColor blackColor] : %orig; }
-- (UIColor *)overlayButtonColor { return isOLEDTheme() ? [UIColor blackColor] : %orig; }
-- (UIColor *)overlayErrorBackgroundColor { return isOLEDTheme() ? [UIColor blackColor] : %orig; }
-- (UIColor *)AVSwitchBackgroundColor { return isOLEDTheme() ? [UIColor blackColor] : %orig; }
-- (UIColor *)AVSwitchActiveModeColor { return isOLEDTheme() ? [[UIColor whiteColor] colorWithAlphaComponent:0.1] : %orig; }
-- (UIColor *)queueBackgroundColor { return isOLEDTheme() ? [UIColor blackColor] : %orig; }
-- (UIColor *)queueCurrentlyPlayingColor { return isOLEDTheme() ? [[UIColor whiteColor] colorWithAlphaComponent:0.1] : %orig; }
+#pragma mark - Paleta Generala YT (OLED + Gold Accent)
+%hook YTCommonColorPalette
+- (UIColor *)brandBackgroundSolid   { return [UIColor blackColor]; }
+- (UIColor *)brandBackgroundPrimary { return [UIColor blackColor]; }
+- (UIColor *)generalBackgroundA     { return [UIColor blackColor]; }
+- (UIColor *)generalBackgroundB     { return [UIColor blackColor]; }
+- (UIColor *)menuBackground         { return [UIColor blackColor]; }
+- (UIColor *)staticBrandRed         { return goldAccentColor(); }
+- (UIColor *)themedRed              { return goldAccentColor(); }
+%end
 
-- (BOOL)gradientBackgroundEnabled { return isOLEDTheme() ? NO : %orig; }
+#pragma mark - Player & Meniuri OLED
+%hook YTMPlayerPageColorScheme
+- (UIColor *)backgroundColor { return [UIColor blackColor]; }
+- (UIColor *)expandedTabsBackgroundColor { return [UIColor blackColor]; }
+- (UIColor *)miniPlayerColor { return [UIColor blackColor]; }
+- (UIColor *)expandedTabViewColor { return [UIColor blackColor]; }
+- (UIColor *)overlayButtonColor { return [UIColor blackColor]; }
+- (UIColor *)overlayErrorBackgroundColor { return [UIColor blackColor]; }
+- (UIColor *)AVSwitchBackgroundColor { return [UIColor blackColor]; }
+- (UIColor *)AVSwitchActiveModeColor { return [goldAccentColor() colorWithAlphaComponent:0.25]; }
+- (UIColor *)queueBackgroundColor { return [UIColor blackColor]; }
+- (UIColor *)queueCurrentlyPlayingColor { return [goldAccentColor() colorWithAlphaComponent:0.15]; }
+- (BOOL)gradientBackgroundEnabled { return NO; }
 %end
 
 %hook YTPivotBarView
@@ -90,98 +94,75 @@ static BOOL isLowContrast() {
     if (isOLEDTheme()) orig.backgroundColor = [UIColor blackColor];
     return orig;
 }
+- (void)didMoveToWindow {
+    %orig;
+    if (isOLEDTheme() && self.subviews.count > 0) {
+        self.subviews[0].backgroundColor = [UIColor blackColor];
+    }
+}
 %end
 
-@interface YTLightweightBrowseBackgroundView : UIView
-@end
+%hook YTMMusicMenuTitleView
+- (void)didMoveToWindow {
+    %orig;
+    if (isOLEDTheme()) self.backgroundColor = [UIColor blackColor];
+}
+%end
+
+%hook MDCSnackbarMessageView
+- (void)didMoveToWindow {
+    %orig;
+    if (isOLEDTheme()) self.backgroundColor = [UIColor blackColor];
+}
+%end
 
 %hook YTLightweightBrowseBackgroundView
 - (UIImageView *)imageView {
-    if (!isOLEDTheme()) {
-        return %orig;
-    }
-    
     self.backgroundColor = [UIColor blackColor];
     return nil;
 }
 %end
 
-// %hook YTCommonColorPalette
-// - (UIColor *)brandBackgroundSolid { return isOLEDTheme() ? [UIColor blackColor] : %orig; }
-// - (UIColor *)brandBackgroundPrimary { return isOLEDTheme() ? [UIColor blackColor] : %orig; }
-// %end
+#pragma mark - Interceptare inteligenta Rosu -> Auriu (#FFD700) in toata aplicatia
+%hook UIColor
++ (UIColor *)colorWithRed:(CGFloat)red green:(CGFloat)green blue:(CGFloat)blue alpha:(CGFloat)alpha {
+    // Daca aplicatia incearca sa genereze o nuanta de rosu aprins (specifica YouTube / YTMusic)
+    if (red > 0.85 && green < 0.22 && blue < 0.22 && alpha > 0.5) {
+        return %orig(1.00, 0.843, 0.00, alpha);
+    }
+    // Daca incearca sa genereze fundalul gri-inchis standard YTMusic (#030303 - #212121), il facem Negru OLED pur
+    if (red == green && green == blue && red > 0.0 && red < 0.14 && alpha == 1.0) {
+        return %orig(0.0, 0.0, 0.0, 1.0);
+    }
+    return %orig;
+}
 
-// %hook YTPivotBarView
-// - (void)didMoveToWindow {
-//     if (isOLEDTheme()) self.subviews[0].backgroundColor = [UIColor blackColor];
-//     %orig;
-// }
-// %end
++ (UIColor *)systemRedColor {
+    return goldAccentColor();
+}
 
-// %hook YTMMusicMenuTitleView
-// - (void)didMoveToWindow {
-//     if (isOLEDTheme()) self.backgroundColor = [UIColor blackColor];
-//     %orig;
-// }
-// %end
-
-// %hook MDCSnackbarMessageView
-// - (void)didMoveToWindow {
-//     if (isOLEDTheme()) self.backgroundColor = [UIColor blackColor];
-//     %orig;
-// }
-// %end
-
-// %hook YTMPlayerPageColorScheme
-// - (void)setMiniPlayerColor:(UIColor *)color {
-//     isOLEDTheme() ? %orig([UIColor blackColor]) : %orig;
-// }
-
-// - (void)setQueueBackgroundColor:(UIColor *)color {
-//     isOLEDTheme() ? %orig([UIColor blackColor]) : %orig;
-// }
-
-// - (void)setQueueCurrentlyPlayingBackgroundColor:(UIColor *)color {
-//     isOLEDTheme() ? %orig([UIColor blackColor]) : %orig;
-// }
-
-// - (void)setTabViewColor:(UIColor *)color {
-//     isOLEDTheme() ? %orig([UIColor blackColor]) : %orig;
-// }
-
-// - (void)setAVSwitchBackgroundColor:(UIColor *)color {
-//     %orig(color);
-//     if (isOLEDTheme()) [self setPlayButtonColor:color];
-// }
-
-// - (void)setBackgroundColor:(UIColor *)color {
-//     isOLEDTheme() ? %orig([UIColor blackColor]) : %orig;
-// }
-// %end
-
-// %hook YTLightweightBrowseBackgroundView
-// - (id)imageView {
-//     return isOLEDTheme() ? nil : %orig;
-// }
-// %end
++ (UIColor *)redColor {
+    return goldAccentColor();
+}
+%end
 
 #pragma mark - OLED Dark Keyboard
-%hook UIPredictionViewController // support prediction bar - @ichitaso: http://gist.github.com/ichitaso/935100fd53a26f18a9060f7195a1be0e
+%hook UIPredictionViewController
 - (void)loadView {
     %orig;
     if (isOLEDKeyboard()) [self.view setBackgroundColor:[UIColor blackColor]];
 }
 %end
 
-%hook UICandidateViewController // support prediction bar - @ichitaso:http://gist.github.com/ichitaso/935100fd53a26f18a9060f7195a1be0e
+%hook UICandidateViewController
 - (void)loadView {
     %orig;
     if (isOLEDKeyboard()) [self.view setBackgroundColor:[UIColor blackColor]];
 }
 %end
 
-%hook UIKBRenderConfig // Prediction text color
-- (void)setLightKeyboard:(BOOL)arg1 { isOLEDKeyboard() ? %orig(NO) : %orig; }
+%hook UIKBRenderConfig
+- (void)setLightKeyboard:(BOOL)arg1 { %orig(NO); }
 %end
 
 %hook UIKeyboardDockView
@@ -195,21 +176,5 @@ static BOOL isLowContrast() {
 - (void)didMoveToWindow {
     if (isOLEDKeyboard()) self.backgroundColor = [UIColor blackColor];
     %orig;
-}
-%end
-
-#pragma mark - Low contrast mode
-%hook YTCommonColorPalette
-- (UIColor *)textPrimary { 
-    return isLowContrast() ? [UIColor colorWithWhite:0.565 alpha:1] : %orig;
-}
-- (UIColor *)textSecondary { 
-    return isLowContrast() ? [UIColor colorWithWhite:0.565 alpha:1] : %orig;
-}
-%end
-
-%hook UIColor
-+ (UIColor *)whiteColor {
-    return isLowContrast() ? [UIColor colorWithWhite:0.565 alpha:1] : %orig;
 }
 %end
